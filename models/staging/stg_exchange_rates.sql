@@ -1,5 +1,8 @@
 with source as (
-    select * from {{ source('raw', 'exchange_rates') }}
+    select
+        currency,
+        usd_rate
+    from {{ source('raw', 'exchange_rates') }}
 )
 
 select
