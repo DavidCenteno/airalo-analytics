@@ -1,0 +1,189 @@
+models:
+  - name: fct_orders
+    description: >
+      Fact table at the order grain. Contains one row per order with
+      customer-level metrics derived from completed purchases,
+      such as first/last purchase timestamps, customer type
+      (new vs returning), and inter-purchase intervals.
+
+    columns:
+      - name: order_id
+        description: "Identifier of the order."
+        tests:
+          - not_null
+          - unique
+
+      - name: user_id
+        description: "Identifier of the user who placed the order."
+        tests:
+          - not_null
+
+      - name: created_at
+        description: "Timestamp when the order was created."
+        tests:
+          - not_null
+
+      - name: updated_at
+        description: "Timestamp when the order was last updated."
+        tests:
+          - not_null
+
+      - name: amount_local_currency
+        description: "Monetary amount of the order in the original transaction currency."
+        tests:
+          - not_null
+
+      - name: currency
+        description: "Currency code of the order amount."
+        tests:
+          - not_null
+
+      - name: amount_usd
+        description: "Monetary amount of the order in USD."
+        tests:
+          - not_null
+
+      - name: esim_package
+        description: "Identifier of the eSIM package purchased."
+
+      - name: payment_method
+        description: "Payment method used for the transaction (e.g. card, paypal)."
+
+      - name: card_country
+        description: "Country associated with the payment card used."
+
+      - name: destination_country
+        description: "Country where the eSIM is intended to be used."
+
+      - name: status
+        description: "Final status of the order."
+
+      - name: is_new_customer
+        description: >
+          Boolean flag indicating whether this order is the user's
+          first completed purchase.
+
+      - name: platform
+        description: "Platform where the user registered."
+
+      - name: acquisition_channel
+        description: "Marketing channel through which the user was acquired."
+
+      - name: ip_country
+        description: "Country inferred from IP at signup."
+
+      - name: days_between_first_and_last_completed
+        description: >
+          Number of days between the user's first and last completed
+          purchases. Null if the user has fewer than two completed orders.
+
+      - name: days_since_previous_completed_order
+        description: >
+          Number of days since the user's previous completed order.
+          Null for the first completed order or non-completed orders.
+
+      - name: completed_order_number
+        description: >
+          Sequential index of completed orders for the user,
+          ordered by creation date. Null for non-completed orders.
+
+
+  - name: dim_users
+    description: "Canonical user dimension. One row per user with core attributes."
+
+    columns:
+      - name: user_id
+        description: "Unique identifier for a user."
+        tests:
+          - not_null
+          - unique
+
+      - name: signup_at
+        description: "Timestamp when the user registered."
+
+      - name: platform
+        description: "Platform where the user registered."
+
+      - name: acquisition_channel
+        description: "Marketing channel through which the user was acquired."
+
+      - name: ip_country
+        description: "Country inferred from IP at signup."
+
+
+  - name: fct_users
+    description: >
+      User-level behavioral fact table. One row per user with lifecycle and revenue
+      metrics derived from completed orders only. Metrics are computed using
+      conditional aggregates on the full orders population.
+
+    columns:
+      - name: user_id
+        description: "Unique identifier for the user."
+        tests:
+          - not_null
+          - unique
+
+      - name: completed_orders
+        description: "Number of completed orders placed by the user."
+
+      - name: first_purchase_at
+        description: "Timestamp of the user's first completed order."
+
+      - name: last_purchase_at
+        description: "Timestamp of the user's most recent completed order."
+
+      - name: ltv_usd
+        description: "Total lifetime value in USD, based on completed orders only."
+
+      - name: aov_usd
+        description: "Average order value in USD, calculated from completed orders."
+
+      - name: days_between_first_and_last_purchase
+        description: >
+          Number of days between the user's first and most recent completed purchase.
+          Null if the user has fewer than two completed orders.
+
+  
+  - name: mart_users
+    description: "Business-facing customer 360 table combining user attributes with key lifecycle and revenue metrics."
+
+    columns:
+      - name: user_id
+        description: "Unique identifier for a user."
+        tests:
+          - not_null
+          - unique
+
+      - name: signup_at
+        description: "Timestamp when the user registered."
+
+      - name: platform
+        description: "Platform where the user registered."
+
+      - name: acquisition_channel
+        description: "Marketing channel through which the user was acquired."
+
+      - name: ip_country
+        description: "Country inferred from the user's IP at signup."
+
+      - name: completed_orders
+        description: "Number of completed orders placed by the user."
+
+      - name: first_purchase_at
+        description: "Timestamp of the user's first completed order."
+
+      - name: last_purchase_at
+        description: "Timestamp of the user's most recent completed order."
+
+      - name: ltv_usd
+        description: "Total lifetime value of the user in USD (until current date)."
+
+      - name: aov_usd
+        description: "Average order value in USD."
+
+      - name: days_between_first_and_last_purchase
+        description: "Days between first and last completed purchase."
+
+      - name: days_since_last_purchase
+        description: "Number of days since the user's most recent completed purchase."
