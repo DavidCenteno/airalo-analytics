@@ -72,9 +72,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
 
       - name: Install dbt
+        id: install
         # Pin these to the versions you use locally, e.g. dbt-core==1.10.*
         run: pip install dbt-core dbt-bigquery
 
@@ -88,5 +88,6 @@ jobs:
         run: dbt build --target ci
 
       - name: Drop the PR dataset
-        if: always()
+        # Runs even if the build failed, but only if dbt was installed
+        if: always() && steps.install.outcome == 'success'
         run: dbt run-operation drop_ci_schema --target ci
