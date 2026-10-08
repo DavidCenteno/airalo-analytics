@@ -1,0 +1,26 @@
+[sqlfluff]
+dialect = bigquery
+# The jinja templater understands ref()/source()/config() without needing
+# a warehouse connection, so linting stays fast and secret-free.
+templater = jinja
+max_line_length = 120
+# Start lenient; tighten once the existing code is clean.
+exclude_rules = LT05, ST06
+
+[sqlfluff:templater:jinja]
+apply_dbt_builtins = True
+
+[sqlfluff:indentation]
+tab_space_size = 4
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:aliasing.table]
+aliasing = explicit
+
+[sqlfluff:rules:aliasing.column]
+aliasing = explicit
