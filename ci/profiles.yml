@@ -1,0 +1,16 @@
+# Used only by GitHub Actions (DBT_PROFILES_DIR points here).
+# The top-level key must match `profile:` in your dbt_project.yml.
+airalo_analytics:
+  target: ci
+  outputs:
+    ci:
+      type: bigquery
+      # Uses the credentials set up by google-github-actions/auth in the workflow
+      method: oauth
+      project: "{{ env_var('GCP_PROJECT_ID') }}"
+      dataset: "{{ env_var('DBT_CI_SCHEMA') }}"
+      location: "{{ env_var('BQ_LOCATION', 'EU') }}"
+      threads: 8
+      job_execution_timeout_seconds: 600
+      job_retries: 1
+      priority: interactive

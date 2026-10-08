@@ -1,0 +1,92 @@
+name: dbt CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "models/**"
+      - "macros/**"
+      - "seeds/**"
+      - "snapshots/**"
+      - "tests/**"
+      - "dbt_project.yml"
+      - "packages.yml"
+      - ".sqlfluff"
+      - "ci/**"
+      - ".github/workflows/dbt-ci.yml"
+
+# Cancel a running check if new commits are pushed to the same PR
+concurrency:
+  group: dbt-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  DBT_PROFILES_DIR: ${{ github.workspace }}/ci
+  # Each PR builds into its own BigQuery dataset, e.g. ci_pr_42
+  DBT_CI_SCHEMA: ci_pr_${{ github.event.pull_request.number }}
+
+jobs:
+  lint:
+    name: Lint SQL
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # needed to diff against the base branch
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install SQLFluff
+        run: pip install "sqlfluff>=3,<4"
+
+      - name: Lint SQL files changed in this PR
+        run: |
+          git diff --name-only --diff-filter=d \
+            origin/${{ github.base_ref }}...HEAD -- 'models/**/*.sql' 'macros/**/*.sql' > changed.txt
+          if [ -s changed.txt ]; then
+            echo "Linting:"; cat changed.txt
+            sqlfluff lint $(cat changed.txt) --format github-annotation-native
+          else
+            echo "No SQL files changed."
+          fi
+
+  build:
+    name: Build & test DAG
+    needs: lint
+    runs-on: ubuntu-latest
+    env:
+      # Set under Settings > Secrets and variables > Actions
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      BQ_LOCATION: ${{ vars.BQ_LOCATION || 'EU' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          # JSON key of a CI service account (BigQuery Data Editor + Job User)
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dbt
+        # Pin these to the versions you use locally, e.g. dbt-core==1.10.*
+        run: pip install dbt-core dbt-bigquery
+
+      - name: Install dbt packages
+        run: dbt deps
+
+      - name: Validate project (YAML, refs, configs)
+        run: dbt parse --target ci
+
+      - name: Build models and run all tests (whole DAG, in dependency order)
+        run: dbt build --target ci
+
+      - name: Drop the PR dataset
+        if: always()
+        run: dbt run-operation drop_ci_schema --target ci
