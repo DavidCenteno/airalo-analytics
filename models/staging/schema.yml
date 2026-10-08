@@ -6,35 +6,36 @@ models:
     columns:
       - name: order_id
         description: "Identifier of the order."
-        tests:
+        data_tests:
           - not_null
 
       - name: user_id
         description: "Identifier of the user who placed the order."
-        tests:
+        data_tests:
           - not_null
           - relationships:
-              to: ref('stg_users')
-              field: user_id
+              arguments:
+                to: ref('stg_users')
+                field: user_id
 
       - name: created_at
         description: "Timestamp when the order was created."
-        tests:
+        data_tests:
           - not_null
 
       - name: updated_at
         description: "Timestamp when the order was last updated."
-        tests:
+        data_tests:
           - not_null
 
       - name: amount
         description: "Monetary amount of the order in the original transaction currency."
-        tests:
+        data_tests:
           - not_null
 
       - name: currency
         description: "Currency code of the order amount."
-        tests:
+        data_tests:
           - not_null
 
       - name: esim_package
@@ -51,11 +52,12 @@ models:
 
       - name: status
         description: "Current status of the order in the source system."
-        tests:
+        data_tests:
           - accepted_values:
-              values: ['completed', 'refunded', 'failed']
+              arguments:
+                values: ['completed', 'refunded', 'failed']
 
-    tests:
+    data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns:
@@ -68,13 +70,13 @@ models:
     columns:
       - name: user_id
         description: "Unique identifier for a user."
-        tests:
+        data_tests:
           - not_null
           - unique
-          
+
       - name: created_at
         description: "Timestamp when the user account was created."
-        tests:
+        data_tests:
           - not_null
 
       - name: platform
@@ -92,13 +94,14 @@ models:
     columns:
       - name: currency
         description: "Currency code."
-        tests:
+        data_tests:
           - not_null
           - unique
 
       - name: usd_rate
         description: "Exchange rate to convert from the given currency to USD."
-        tests:
+        data_tests:
           - not_null
           - dbt_utils.expression_is_true:
-              expression: "> 0"
+              arguments:
+                expression: "> 0"
